@@ -1,1 +1,10 @@
 .vs
+requirements-full.txt
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
+processed-images/
