@@ -85,13 +85,14 @@ def fit_with_min_margin(
 # ---------- Watermark ----------
 def apply_opacity(img_rgba: Image.Image, opacity: float) -> Image.Image:
     """Applies uniform opacity to the whole image, preserving existing transparency."""
-    if img_rgba.mode != "RGBA":
-        img_rgba = img_rgba.convert("RGBA")
-    alpha = img_rgba.getchannel("A")
-    # Use point to scale alpha, but ensure rounding and clipping
+    # Always work on a copy to avoid in-place modification
+    out = img_rgba.copy()
+    if out.mode != "RGBA":
+        out = out.convert("RGBA")
+    alpha = out.getchannel("A")
     new_alpha = alpha.point(lambda p: int(p * opacity))
-    img_rgba.putalpha(new_alpha)
-    return img_rgba
+    out.putalpha(new_alpha)
+    return out
 
 def paste_watermark_bottom_right(
     base_rgba: Image.Image,

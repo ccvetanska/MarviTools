@@ -2,6 +2,7 @@ from pathlib import Path
 import io
 import streamlit as st
 from PIL import Image
+import time
 from core.image_ops import (
     detect_colored_bbox, crop_to_bbox,
     fit_with_min_margin, paste_watermark_bottom_right
@@ -25,7 +26,7 @@ def render():
     with col1:
         canvas_size = st.number_input("Размер на изходното изображение", min_value=100, max_value=2000, value=500, step=10)
     with col2:
-        min_margin = st.number_input("Минимална рамка в px", min_value=0, max_value=200, value=30, step=1)
+        min_margin = st.number_input("Минимална рамка в px", min_value=0, max_value=200, value=35, step=1)
     with col3:
         bg_mode = st.selectbox("Фон", ["Бял", "Прозрачен"])
 
@@ -59,11 +60,16 @@ def render():
         elif DEFAULT_WM.exists():
             wm_img = Image.open(DEFAULT_WM)
 
-        composed = fitted
+        # Compose image with watermark
+        composed = fitted.copy()
         if wm_img is not None:
             composed = paste_watermark_bottom_right(
-                base_rgba=fitted, wm_img=wm_img, opacity=opacity, offset_px=5, allow_oversize=False
+                base_rgba=composed, wm_img=wm_img, opacity=opacity, offset_px=5, allow_oversize=False
             )
+
+        # If background is white, flatten alpha for PNG
+        if background == "white" and out_format == "PNG":
+            composed = composed.convert("RGB")
 
         st.divider()
         st.subheader("Преглед")
@@ -71,17 +77,18 @@ def render():
 
         # 5) Download button
         buf = io.BytesIO()
+        ts = str(int(time.time()))[-6:]  # last 6 digits of unix timestamp
         if out_format == "PNG":
-            # PNG supports transparency
+            # PNG supports transparency if background is transparent
             composed.save(buf, format="PNG")
             mime = "image/png"
-            fname = "image_500x500.png"
+            fname = f"{ts}_500x500.png"
         else:
             # JPEG supports only RGB
             composed_rgb = composed.convert("RGB")
             composed_rgb.save(buf, format="JPEG", quality=95)
             mime = "image/jpeg"
-            fname = "image_500x500.jpg"
+            fname = f"{ts}_500x500.jpg"
 
         buf.seek(0)
         st.download_button("⬇️ Свали", data=buf, file_name=fname, mime=mime)
